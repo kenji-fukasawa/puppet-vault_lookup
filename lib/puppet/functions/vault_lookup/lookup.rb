@@ -2,9 +2,10 @@ Puppet::Functions.create_function(:'vault_lookup::lookup') do
   dispatch :lookup do
     param 'String', :path
     param 'String', :vault_url
+    optional_param 'String', :ca_path
   end
 
-  def lookup(path, vault_url)
+  def lookup(path, vault_url, ca_path = Puppet[:ssl_client_ca_auth] || Puppet[:localcacert])
     uri = URI(vault_url)
     # URI is used here to just parse the vault_url into a host string
     # and port; it's possible to generate a URI::Generic when a scheme
@@ -12,7 +13,7 @@ Puppet::Functions.create_function(:'vault_lookup::lookup') do
     # host is defined.
     raise Puppet::Error, "Unable to parse a hostname from #{vault_url}" unless uri.hostname
 
-    connection = Puppet::Network::HttpPool.http_ssl_instance(uri.host, uri.port)
+    connection = Puppet::Network::HttpPool.http_ssl_instance(uri.host, uri.port, Puppet::SSL::Validator::DefaultValidator.new(ca_path))
 
     token = get_auth_token(connection)
 
